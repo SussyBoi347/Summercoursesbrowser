@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
 import { Input } from "./components/ui/input";
+import { Button } from "./components/ui/button";
 import { Search, GraduationCap, Flame, Sparkles } from "lucide-react";
 import { courses } from "./data/courses";
 import { CourseCard } from "./components/course-card";
 import { CourseDetailDialog } from "./components/course-detail-dialog";
 import { FilterBar } from "./components/filter-bar";
+import { LoginPage } from "./components/login-page";
+import { AiPlanAssistant } from "./components/ai-plan-assistant";
 import type { Course } from "./data/courses";
 
 export default function App() {
@@ -12,6 +15,8 @@ export default function App() {
   const [selectedSubject, setSelectedSubject] = useState("all");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userName, setUserName] = useState("");
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
@@ -56,22 +61,45 @@ export default function App() {
     setSelectedSubject("all");
   };
 
+  const handleClearAll = () => {
+    setSearchQuery("");
+    setSelectedSubject("all");
+  };
+
   const hasFilters = searchQuery || selectedSubject !== "all";
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={(user) => {
+      setUserName(user.name);
+      setIsAuthenticated(true);
+    }} />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-10 shadow-sm backdrop-blur-sm bg-white/95">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <GraduationCap className="w-8 h-8 text-primary" />
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-primary/10 p-3 rounded-xl">
+                <GraduationCap className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-3xl text-primary">
+                  Summer College Courses 2026
+                </h1>
+                <p className="text-muted-foreground mt-1">High school students — accelerate your college journey</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl text-primary">
-                Summer College Courses 2026
-              </h1>
-              <p className="text-muted-foreground mt-1">High school students — accelerate your college journey</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <AiPlanAssistant userName={userName || "Student"} />
+              <span className="text-sm text-muted-foreground">Hi, <span className="font-medium text-primary">{userName || "Student"}</span></span>
+              <Button variant="outline" size="sm" onClick={() => {
+                setIsAuthenticated(false);
+                setUserName("");
+              }}>
+                Log out
+              </Button>
             </div>
           </div>
 
@@ -83,6 +111,7 @@ export default function App() {
               placeholder="Search courses, instructors, colleges, or topics..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search courses"
               className="pl-12 h-12 text-base border-2 focus:border-primary shadow-sm"
             />
           </div>
@@ -105,16 +134,23 @@ export default function App() {
             </div>
             <p className="text-foreground text-xl font-medium">No courses found matching your criteria.</p>
             <p className="text-muted-foreground mt-2">Try adjusting your filters or search query.</p>
+            <Button onClick={handleClearAll} variant="outline" className="mt-6">
+              Clear search and filters
+            </Button>
           </div>
         ) : hasFilters ? (
           <>
-            <div className="mb-8">
+            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
               <p className="text-lg">
                 <span className="text-primary font-semibold">{filteredCourses.length}</span>{" "}
                 <span className="text-muted-foreground">
                   {filteredCourses.length === 1 ? "course" : "courses"} found
                 </span>
               </p>
+
+              <Button onClick={handleClearAll} variant="outline" size="sm">
+                Clear all
+              </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredCourses.map((course) => (
