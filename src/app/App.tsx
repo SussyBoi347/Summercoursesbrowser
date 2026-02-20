@@ -7,7 +7,6 @@ import { CourseCard } from "./components/course-card";
 import { CourseDetailDialog } from "./components/course-detail-dialog";
 import { FilterBar } from "./components/filter-bar";
 import { LoginPage } from "./components/login-page";
-import { AiPlanAssistant } from "./components/ai-plan-assistant";
 import type { Course } from "./data/courses";
 
 export default function App() {
@@ -16,7 +15,6 @@ export default function App() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userName, setUserName] = useState("");
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
@@ -68,10 +66,7 @@ export default function App() {
 
   const hasFilters = searchQuery || selectedSubject !== "all";
   if (!isAuthenticated) {
-    return <LoginPage onLogin={(user) => {
-      setUserName(user.name);
-      setIsAuthenticated(true);
-    }} />;
+    return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
   }
 
   return (
@@ -91,16 +86,9 @@ export default function App() {
                 <p className="text-muted-foreground mt-1">High school students — accelerate your college journey</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <AiPlanAssistant userName={userName || "Student"} />
-              <span className="text-sm text-muted-foreground">Hi, <span className="font-medium text-primary">{userName || "Student"}</span></span>
-              <Button variant="outline" size="sm" onClick={() => {
-                setIsAuthenticated(false);
-                setUserName("");
-              }}>
-                Log out
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => setIsAuthenticated(false)}>
+              Log out
+            </Button>
           </div>
 
           {/* Search Bar */}
