@@ -36,7 +36,7 @@ export function FilterBar({
       </div>
 
       {hasActiveFilters && (
-        <Button variant="outline" size="icon" onClick={onClearFilters} title="Clear filters">
+        <Button variant="outline" size="icon" onClick={onClearFilters} title="Clear filters" aria-label="Clear subject filter">
           <X className="w-4 h-4" />
         </Button>
       )}
