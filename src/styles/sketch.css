@@ -1,0 +1,118 @@
+:root {
+  --paper: #fafaf7;
+  --paper-dark: #f1f4ef;
+  --pencil: #2f4f3a;
+  --pencil-soft: #67806f;
+  --green-strong: #2d6a3f;
+  --green-mid: #5f8a68;
+  --gray-ink: #5d645f;
+}
+
+.sketch-app {
+  background: var(--paper);
+  color: var(--pencil);
+  background-image:
+    radial-gradient(rgba(47, 79, 58, 0.04) 0.7px, transparent 0.7px),
+    repeating-linear-gradient(0deg, rgba(47, 79, 58, 0.025), rgba(47, 79, 58, 0.025) 1px, transparent 1px, transparent 7px);
+  background-size: 5px 5px, 100% 8px;
+}
+
+.sketch-topbar {
+  background: color-mix(in srgb, var(--paper) 92%, white 8%);
+  border-color: color-mix(in srgb, var(--pencil) 25%, white 75%);
+}
+
+.sketch-heading,
+.sketch-title {
+  font-family: "Patrick Hand", "Segoe UI", sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.sketch-input,
+.sketch-btn,
+.sketch-card,
+.sketch-pill {
+  border: 2px solid color-mix(in srgb, var(--pencil) 65%, white 35%) !important;
+  border-radius: 12px;
+  position: relative;
+}
+
+.sketch-input {
+  background: color-mix(in srgb, var(--paper) 80%, white 20%);
+}
+
+.sketch-input:focus-visible,
+.sketch-btn:focus-visible,
+.sketch-card:focus-within {
+  outline: 3px solid color-mix(in srgb, var(--green-strong) 65%, white 35%);
+  outline-offset: 1px;
+}
+
+.sketch-card {
+  background: linear-gradient(
+      135deg,
+      rgba(47, 79, 58, 0.04) 0%,
+      rgba(47, 79, 58, 0.015) 55%,
+      rgba(47, 79, 58, 0.03) 100%
+    ),
+    var(--paper);
+  box-shadow: 1px 1px 0 rgba(47, 79, 58, 0.22);
+}
+
+.sketch-card::before,
+.sketch-btn::before,
+.sketch-input::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 1px solid rgba(47, 79, 58, 0.25);
+  border-radius: 13px;
+  transform: rotate(-0.28deg);
+  pointer-events: none;
+}
+
+.sketch-btn {
+  background: var(--paper);
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.sketch-btn:hover {
+  transform: translateY(-1px) rotate(-0.25deg);
+}
+
+.sketch-btn-primary {
+  background: color-mix(in srgb, var(--green-strong) 85%, white 15%);
+  color: white;
+}
+
+.sketch-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  background: color-mix(in srgb, var(--green-mid) 20%, white 80%);
+}
+
+.sketch-check [data-slot="checkbox"] {
+  border-radius: 999px;
+  border-width: 2px;
+}
+
+.sketch-slider [data-slot="slider-track"] {
+  border: 2px solid color-mix(in srgb, var(--pencil) 65%, white 35%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper-dark) 70%, white 30%);
+}
+
+.sketch-slider [data-slot="slider-thumb"] {
+  border-width: 2px;
+  background: color-mix(in srgb, var(--paper) 85%, white 15%);
+}
+
+.sketch-tilt {
+  transform: rotate(var(--tilt, 0deg));
+}
+
+[data-slot="dialog-content"].sketch-card {
+  background: var(--paper);
+}
