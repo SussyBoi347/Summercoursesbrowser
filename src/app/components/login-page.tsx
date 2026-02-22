@@ -1,12 +1,64 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { GraduationCap, Lock, Mail, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
+interface AuthUser {
+  email: string;
+  name: string;
+  picture?: string;
+}
+
 interface LoginPageProps {
-  onLogin: () => void;
+  onLogin: (user: AuthUser) => void;
+}
+
+type GoogleCredentialResponse = {
+  credential?: string;
+};
+
+type GoogleAccounts = {
+  id: {
+    initialize: (config: {
+      client_id: string;
+      callback: (response: GoogleCredentialResponse) => void;
+      auto_select?: boolean;
+      cancel_on_tap_outside?: boolean;
+    }) => void;
+    renderButton: (
+      parent: HTMLElement,
+      options: {
+        theme?: "outline" | "filled_blue" | "filled_black";
+        size?: "large" | "medium" | "small";
+        text?: "signin_with" | "signup_with" | "continue_with" | "signin";
+        width?: string;
+        shape?: "rectangular" | "pill" | "circle" | "square";
+      },
+    ) => void;
+    prompt: () => void;
+  };
+};
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: GoogleAccounts;
+    };
+  }
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const payloadPart = token.split(".")[1];
+    if (!payloadPart) return null;
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(normalized);
+    return JSON.parse(decoded) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 }
 
 export function LoginPage({ onLogin }: LoginPageProps) {
@@ -14,6 +66,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
+  const [googleError, setGoogleError] = useState("");
+  const [googleReady, setGoogleReady] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -29,8 +86,78 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     }
 
     setError("");
-    onLogin();
+    onLogin({
+      email,
+      name: email.split("@")[0] || "Student",
+    });
   };
+
+  useEffect(() => {
+    if (!googleClientId) {
+      setGoogleError("Google Sign-In is not configured yet. Add VITE_GOOGLE_CLIENT_ID to your environment.");
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>("script[data-google-identity='true']");
+
+    const initializeGoogle = () => {
+      if (!window.google || !googleButtonRef.current) return;
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: (response: GoogleCredentialResponse) => {
+          if (!response.credential) {
+            setGoogleError("Google sign-in failed. Please try again.");
+            return;
+          }
+
+          const payload = decodeJwtPayload(response.credential);
+          if (!payload) {
+            setGoogleError("Could not read your Google account details.");
+            return;
+          }
+
+          const googleEmail = typeof payload.email === "string" ? payload.email : "student@google.com";
+          const googleName = typeof payload.name === "string" ? payload.name : "Google Student";
+          const googlePicture = typeof payload.picture === "string" ? payload.picture : undefined;
+
+          setGoogleError("");
+          onLogin({
+            email: googleEmail,
+            name: googleName,
+            picture: googlePicture,
+          });
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+
+      googleButtonRef.current.innerHTML = "";
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        width: "320",
+        shape: "rectangular",
+      });
+
+      setGoogleReady(true);
+    };
+
+    if (existingScript) {
+      initializeGoogle();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = "true";
+    script.onload = () => initializeGoogle();
+    script.onerror = () => setGoogleError("Unable to load Google Sign-In. Check your network and try again.");
+    document.head.appendChild(script);
+  }, [googleClientId, onLogin]);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background via-muted/40 to-background px-4 py-10 md:py-16">
@@ -111,16 +238,30 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 <Button type="submit" className="h-11 w-full">
                   Sign In
                 </Button>
-
-                <div className="flex items-center justify-between text-sm">
-                  <button type="button" className="text-primary hover:underline">
-                    Forgot password?
-                  </button>
-                  <button type="button" className="text-primary hover:underline">
-                    Create account
-                  </button>
-                </div>
               </form>
+
+              <div className="my-5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">or continue with</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div className="space-y-3">
+                <div ref={googleButtonRef} className="flex justify-center" />
+                {!googleReady && !googleError && (
+                  <p className="text-center text-sm text-muted-foreground">Loading Google Sign-In…</p>
+                )}
+                {googleError && <p className="text-center text-sm text-destructive">{googleError}</p>}
+              </div>
+
+              <div className="mt-5 flex items-center justify-between text-sm">
+                <button type="button" className="text-primary hover:underline">
+                  Forgot password?
+                </button>
+                <button type="button" className="text-primary hover:underline">
+                  Create account
+                </button>
+              </div>
             </CardContent>
           </Card>
         </div>

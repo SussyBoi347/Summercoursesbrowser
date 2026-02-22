@@ -1,233 +1,308 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Bot,
+  FolderSearch,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  Bookmark,
+  BookmarkCheck,
+} from "lucide-react";
+import { courses } from "./data/courses";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
-import { Search, GraduationCap, Flame, Sparkles } from "lucide-react";
-import { courses } from "./data/courses";
-import { CourseCard } from "./components/course-card";
-import { CourseDetailDialog } from "./components/course-detail-dialog";
-import { FilterBar } from "./components/filter-bar";
-import { LoginPage } from "./components/login-page";
-import type { Course } from "./data/courses";
+import { Textarea } from "./components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./components/ui/dialog";
+
+interface YearPlan {
+  year: number;
+  focus: string;
+  summer: string;
+  internship: string;
+}
+
+function buildAiPlan(goal: string): YearPlan[] {
+  const lower = goal.toLowerCase();
+  const track = lower.includes("business")
+    ? "business"
+    : lower.includes("medicine") || lower.includes("health")
+      ? "health sciences"
+      : lower.includes("engineer")
+        ? "engineering"
+        : "technology";
+
+  return [
+    {
+      year: 1,
+      focus: `Build core ${track} foundations and study habits.`,
+      summer: `Complete one introductory college course in ${track} and one skills mini-project.`,
+      internship: "Join a short local mentorship, shadowing, or volunteer role.",
+    },
+    {
+      year: 2,
+      focus: "Strengthen portfolio and join leadership/community activities.",
+      summer: "Take an intermediate program and publish one portfolio artifact.",
+      internship: "Apply for first structured internship or lab assistant role.",
+    },
+    {
+      year: 3,
+      focus: "Specialize and align choices with target colleges/majors.",
+      summer: "Take an advanced course with transferable college credit.",
+      internship: "Pursue competitive internship with measurable outcomes.",
+    },
+    {
+      year: 4,
+      focus: "Finalize transition into college with reduced first-year load.",
+      summer: "Complete capstone summer program and finalize college application materials.",
+      internship: "Select internship directly tied to intended major and long-term goal.",
+    },
+  ];
+}
 
 export default function App() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("all");
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [query, setQuery] = useState("");
+  const [gradeLevel, setGradeLevel] = useState("all");
+  const [subject, setSubject] = useState("all");
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  const [eligibility, setEligibility] = useState("all");
+  const [maxCost, setMaxCost] = useState(5000);
+  const [saved, setSaved] = useState<string[]>([]);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const filteredCourses = useMemo(() => {
-    return courses.filter((course) => {
-      const matchesSearch =
-        searchQuery === "" ||
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.instructor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.college.toLowerCase().includes(searchQuery.toLowerCase());
+  const [isLoading, setIsLoading] = useState(false);
 
-      const matchesSubject = selectedSubject === "all" || course.subject === selectedSubject;
+  const [goal, setGoal] = useState("");
+  const [plan, setPlan] = useState<YearPlan[] | null>(null);
+  const [planSaved, setPlanSaved] = useState(false);
 
-      return matchesSearch && matchesSubject;
-    });
-  }, [searchQuery, selectedSubject]);
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, [query, gradeLevel, subject, onlineOnly, eligibility, maxCost]);
 
-  const popularCourses = useMemo(() => {
-    return filteredCourses.filter(course => course.popular);
-  }, [filteredCourses]);
+  const programs = useMemo(() => {
+    return courses
+      .map((course) => {
+        const computedCost = course.id.endsWith("3") || course.id.endsWith("7") ? null : course.credits * 550;
+        const grade = course.level === "Beginner" ? "9-10" : course.level === "Intermediate" ? "10-11" : "11-12";
+        return {
+          ...course,
+          grade,
+          cost: computedCost,
+        };
+      })
+      .filter((item) => {
+        const matchesQuery =
+          !query ||
+          item.title.toLowerCase().includes(query.toLowerCase()) ||
+          item.description.toLowerCase().includes(query.toLowerCase()) ||
+          item.college.toLowerCase().includes(query.toLowerCase());
 
-  const tailoredCourses = useMemo(() => {
-    // Computer Science and Mathematics courses
-    return filteredCourses.filter(course => 
-      course.subject === "Computer Science" || course.subject === "Mathematics"
-    );
-  }, [filteredCourses]);
+        const matchesGrade = gradeLevel === "all" || item.grade === gradeLevel;
+        const matchesSubject = subject === "all" || item.subject === subject;
+        const matchesOnline = !onlineOnly || item.location.toLowerCase().includes("online");
+        const matchesEligibility =
+          eligibility === "all" ||
+          (eligibility === "no-prereq" && !item.prerequisites) ||
+          (eligibility === "prereq" && !!item.prerequisites);
+        const matchesCost = item.cost === null || item.cost <= maxCost;
 
-  const otherCourses = useMemo(() => {
-    return filteredCourses.filter(course => 
-      !course.popular && 
-      course.subject !== "Computer Science" && 
-      course.subject !== "Mathematics"
-    );
-  }, [filteredCourses]);
+        return matchesQuery && matchesGrade && matchesSubject && matchesOnline && matchesEligibility && matchesCost;
+      });
+  }, [query, gradeLevel, subject, onlineOnly, eligibility, maxCost]);
 
-  const handleCourseClick = (course: Course) => {
-    setSelectedCourse(course);
-    setDialogOpen(true);
+  const subjects = Array.from(new Set(courses.map((course) => course.subject)));
+
+  const toggleSave = (id: string) => {
+    setSaved((prev) => (prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]));
   };
 
-  const handleClearFilters = () => {
-    setSelectedSubject("all");
+  const generatePlan = () => {
+    if (!goal.trim()) return;
+    setPlan(buildAiPlan(goal));
+    setPlanSaved(false);
   };
 
-  const handleClearAll = () => {
-    setSearchQuery("");
-    setSelectedSubject("all");
+  const savePlan = () => {
+    if (!plan) return;
+    localStorage.setItem("summer-ai-4year-plan", JSON.stringify({ goal, plan }));
+    setPlanSaved(true);
   };
 
-  const hasFilters = searchQuery || selectedSubject !== "all";
-  if (!isAuthenticated) {
-    return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
-  }
+  const filterPanel = (
+    <aside className="sketch-panel p-4 md:p-5 space-y-4">
+      <h3 className="sketch-heading text-2xl">Filters</h3>
+
+      <div>
+        <label className="sketch-label">Grade level</label>
+        <select className="sketch-input mt-2" value={gradeLevel} onChange={(event) => setGradeLevel(event.target.value)}>
+          <option value="all">All grades</option>
+          <option value="9-10">9-10</option>
+          <option value="10-11">10-11</option>
+          <option value="11-12">11-12</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="sketch-label">Subject</label>
+        <div className="mt-2 space-y-2">
+          <label className="sketch-check"><input type="radio" checked={subject === "all"} onChange={() => setSubject("all")} />All</label>
+          {subjects.map((item) => (
+            <label key={item} className="sketch-check"><input type="radio" checked={subject === item} onChange={() => setSubject(item)} />{item}</label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="sketch-label">Location / online</label>
+        <label className="sketch-check mt-2"><input type="checkbox" checked={onlineOnly} onChange={(event) => setOnlineOnly(event.target.checked)} />Online only</label>
+      </div>
+
+      <div>
+        <label className="sketch-label">Cost range (max: ${maxCost})</label>
+        <input className="sketch-slider mt-2" type="range" min={500} max={5000} step={250} value={maxCost} onChange={(event) => setMaxCost(Number(event.target.value))} />
+      </div>
+
+      <div>
+        <label className="sketch-label">Eligibility</label>
+        <select className="sketch-input mt-2" value={eligibility} onChange={(event) => setEligibility(event.target.value)}>
+          <option value="all">All</option>
+          <option value="no-prereq">No prerequisites</option>
+          <option value="prereq">Has prerequisites</option>
+        </select>
+      </div>
+    </aside>
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10 shadow-sm backdrop-blur-sm bg-white/95">
-        <div className="container mx-auto px-4 py-6">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-xl">
-                <GraduationCap className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl text-primary">
-                  Summer College Courses 2026
-                </h1>
-                <p className="text-muted-foreground mt-1">High school students — accelerate your college journey</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setIsAuthenticated(false)}>
-              Log out
-            </Button>
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary/60" />
-            <Input
-              type="text"
-              placeholder="Search courses, instructors, colleges, or topics..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search courses"
-              className="pl-12 h-12 text-base border-2 focus:border-primary shadow-sm"
-            />
-          </div>
-
-          {/* Filters */}
-          <FilterBar
-            selectedSubject={selectedSubject}
-            onSubjectChange={setSelectedSubject}
-            onClearFilters={handleClearFilters}
+    <div className="sketch-app min-h-screen">
+      <header className="sketch-topbar">
+        <h1 className="sketch-logo">SummerCourse AI</h1>
+        <div className="relative flex-1 max-w-2xl">
+          <Search className="sketch-search-icon h-5 w-5" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search summer courses, programs, internships..."
+            className="sketch-input h-12 pl-11"
+            aria-label="Search programs"
           />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button className="sketch-button" onClick={() => setShowMobileFilters((prev) => !prev)}>
+            <SlidersHorizontal className="h-4 w-4" />
+            Filters
+          </Button>
+          <Button className="sketch-button" variant="outline">
+            <Bookmark className="h-4 w-4" />
+            Saved ({saved.length})
+          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="sketch-button sketch-primary">
+                <Sparkles className="h-4 w-4" />
+                AI 4-Year Plan
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sketch-panel sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="sketch-heading text-3xl">Plan my next 4 years</DialogTitle>
+                <DialogDescription className="text-foreground">
+                  Tell the AI your goal with summer programs and internships.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Textarea
+                  value={goal}
+                  onChange={(event) => setGoal(event.target.value)}
+                  placeholder="Example: I want top CS internships by senior year and enough college credits to graduate faster."
+                  className="sketch-input min-h-24"
+                />
+                <Button className="sketch-button sketch-primary w-full" onClick={generatePlan}>Generate plan</Button>
+
+                {plan && (
+                  <div className="space-y-3">
+                    {plan.map((year) => (
+                      <div key={year.year} className="sketch-card p-3">
+                        <p className="sketch-heading text-xl">Year {year.year}</p>
+                        <p className="text-sm mt-1"><strong>Focus:</strong> {year.focus}</p>
+                        <p className="text-sm mt-1"><strong>Summer:</strong> {year.summer}</p>
+                        <p className="text-sm mt-1"><strong>Internship:</strong> {year.internship}</p>
+                      </div>
+                    ))}
+
+                    <div className="sketch-card p-4">
+                      <p className="text-sm">Save this plan to your account?</p>
+                      <Button className="sketch-button mt-3" onClick={savePlan}>Save to account</Button>
+                      {planSaved && <p className="text-sm mt-2">✓ Plan saved.</p>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-10">
-        {filteredCourses.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="bg-muted/50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-              <Search className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <p className="text-foreground text-xl font-medium">No courses found matching your criteria.</p>
-            <p className="text-muted-foreground mt-2">Try adjusting your filters or search query.</p>
-            <Button onClick={handleClearAll} variant="outline" className="mt-6">
-              Clear search and filters
-            </Button>
-          </div>
-        ) : hasFilters ? (
-          <>
-            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-              <p className="text-lg">
-                <span className="text-primary font-semibold">{filteredCourses.length}</span>{" "}
-                <span className="text-muted-foreground">
-                  {filteredCourses.length === 1 ? "course" : "courses"} found
-                </span>
-              </p>
+      <main className="mx-auto max-w-7xl px-4 py-6 md:px-6">
+        {showMobileFilters && <div className="md:hidden mb-4">{filterPanel}</div>}
 
-              <Button onClick={handleClearAll} variant="outline" size="sm">
-                Clear all
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredCourses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  onClick={() => handleCourseClick(course)}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="space-y-12">
-            {/* Popular Courses Section */}
-            {popularCourses.length > 0 && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-primary/10 p-2 rounded-lg">
-                    <Flame className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl text-primary">Popular Courses</h2>
-                    <p className="text-sm text-muted-foreground">Trending courses this summer</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {popularCourses.map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      onClick={() => handleCourseClick(course)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
+        <div className="grid gap-6 md:grid-cols-[280px_1fr]">
+          <div className="hidden md:block">{filterPanel}</div>
 
-            {/* Tailored to You Section */}
-            {tailoredCourses.length > 0 && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-primary/10 p-2 rounded-lg">
-                    <Sparkles className="w-6 h-6 text-primary" />
+          <section className="space-y-4">
+            {isLoading ? (
+              <div className="sketch-panel p-8 text-center">
+                <Bot className="mx-auto h-12 w-12 mb-2" />
+                <p className="sketch-heading text-3xl">Sketching results…</p>
+              </div>
+            ) : programs.length === 0 ? (
+              <div className="sketch-panel p-8 text-center">
+                <FolderSearch className="mx-auto h-12 w-12 mb-2" />
+                <p className="sketch-heading text-3xl">No programs found.</p>
+                <p className="text-sm mt-1">Try different filters.</p>
+              </div>
+            ) : (
+              programs.map((program) => (
+                <article key={program.id} className="sketch-card p-4 md:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="sketch-heading text-3xl">{program.title}</h2>
+                      <p className="text-sm mt-1">{program.college} · {program.subject}</p>
+                    </div>
+                    <span className="sketch-pill">Grade {program.grade}</span>
                   </div>
-                  <div>
-                    <h2 className="text-2xl text-primary">Tailored to You</h2>
-                    <p className="text-sm text-muted-foreground">Based on your interests in STEM</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {tailoredCourses.map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      onClick={() => handleCourseClick(course)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
 
-            {/* More Courses Section */}
-            {otherCourses.length > 0 && (
-              <section>
-                <div className="mb-6">
-                  <h2 className="text-2xl text-primary">More Courses</h2>
-                  <p className="text-sm text-muted-foreground">Explore additional offerings</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {otherCourses.map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      onClick={() => handleCourseClick(course)}
-                    />
-                  ))}
-                </div>
-              </section>
+                  <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
+                    <p><strong>Provider:</strong> {program.college}</p>
+                    <p><strong>Dates:</strong> {program.session}</p>
+                    <p><strong>Cost:</strong> {program.cost ? `$${program.cost}` : "Unknown"}</p>
+                  </div>
+
+                  <p className="mt-3 text-sm leading-relaxed line-clamp-3">{program.description}</p>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button className="sketch-button sketch-primary">Open Apply Link</Button>
+                    <Button className="sketch-button" variant="outline" onClick={() => toggleSave(program.id)}>
+                      {saved.includes(program.id) ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                      {saved.includes(program.id) ? "Saved" : "Save"}
+                    </Button>
+                  </div>
+                </article>
+              ))
             )}
-          </div>
-        )}
+          </section>
+        </div>
       </main>
-
-      {/* Course Detail Dialog */}
-      <CourseDetailDialog
-        course={selectedCourse}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
     </div>
   );
 }
