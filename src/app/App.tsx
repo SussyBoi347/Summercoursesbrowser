@@ -1,209 +1,323 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  BookMarked,
+  Bot,
+  FolderSearch,
+  GraduationCap,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import { Input } from "./components/ui/input";
-import { Search, GraduationCap, Flame, Sparkles } from "lucide-react";
+import { Button } from "./components/ui/button";
+import { Checkbox } from "./components/ui/checkbox";
+import { Slider } from "./components/ui/slider";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "./components/ui/sheet";
 import { courses } from "./data/courses";
-import { CourseCard } from "./components/course-card";
-import { CourseDetailDialog } from "./components/course-detail-dialog";
-import { FilterBar } from "./components/filter-bar";
-import type { Course } from "./data/courses";
+import { LoginPage } from "./components/login-page";
+import { AiPlanAssistant } from "./components/ai-plan-assistant";
+
+type GradeFilter = "9-10" | "10-11" | "11-12";
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userName, setUserName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("all");
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [subjectFilters, setSubjectFilters] = useState<string[]>([]);
+  const [gradeFilters, setGradeFilters] = useState<GradeFilter[]>([]);
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  const [eligibleOnly, setEligibleOnly] = useState(false);
+  const [sessionFilters, setSessionFilters] = useState<string[]>([]);
+  const [costRange, setCostRange] = useState([0, 3000]);
+  const [savedPrograms, setSavedPrograms] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const filteredCourses = useMemo(() => {
+  useEffect(() => {
+    const key = `saved-programs:${userName || "student"}`;
+    const raw = localStorage.getItem(key);
+    if (raw) setSavedPrograms(JSON.parse(raw));
+  }, [userName]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 350);
+    setIsLoading(true);
+    return () => clearTimeout(timer);
+  }, [searchQuery, subjectFilters, gradeFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
+
+  const allSubjects = useMemo(() => [...new Set(courses.map((course) => course.subject))], []);
+
+  const filteredPrograms = useMemo(() => {
     return courses.filter((course) => {
+      const search = searchQuery.toLowerCase();
       const matchesSearch =
-        searchQuery === "" ||
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.instructor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.college.toLowerCase().includes(searchQuery.toLowerCase());
+        !search ||
+        course.title.toLowerCase().includes(search) ||
+        course.description.toLowerCase().includes(search) ||
+        course.college.toLowerCase().includes(search);
 
-      const matchesSubject = selectedSubject === "all" || course.subject === selectedSubject;
+      const matchesSubject = subjectFilters.length === 0 || subjectFilters.includes(course.subject);
 
-      return matchesSearch && matchesSubject;
+      const gradeRange: GradeFilter =
+        course.level === "Beginner" ? "9-10" : course.level === "Intermediate" ? "10-11" : "11-12";
+      const matchesGrade = gradeFilters.length === 0 || gradeFilters.includes(gradeRange);
+
+      const isOnline = course.location.toLowerCase().includes("online");
+      const matchesLocation = !onlineOnly || isOnline;
+      const matchesEligibility = !eligibleOnly || !course.prerequisites;
+      const matchesSession = sessionFilters.length === 0 || sessionFilters.includes(course.session);
+
+      const estimatedCost = course.credits * 600;
+      const matchesCost = estimatedCost >= costRange[0] && estimatedCost <= costRange[1];
+
+      return matchesSearch && matchesSubject && matchesGrade && matchesLocation && matchesEligibility && matchesSession && matchesCost;
     });
-  }, [searchQuery, selectedSubject]);
+  }, [searchQuery, subjectFilters, gradeFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
 
-  const popularCourses = useMemo(() => {
-    return filteredCourses.filter(course => course.popular);
-  }, [filteredCourses]);
+  const savedProgramData = useMemo(
+    () => courses.filter((course) => savedPrograms.includes(course.id)),
+    [savedPrograms],
+  );
 
-  const tailoredCourses = useMemo(() => {
-    // Computer Science and Mathematics courses
-    return filteredCourses.filter(course => 
-      course.subject === "Computer Science" || course.subject === "Mathematics"
-    );
-  }, [filteredCourses]);
-
-  const otherCourses = useMemo(() => {
-    return filteredCourses.filter(course => 
-      !course.popular && 
-      course.subject !== "Computer Science" && 
-      course.subject !== "Mathematics"
-    );
-  }, [filteredCourses]);
-
-  const handleCourseClick = (course: Course) => {
-    setSelectedCourse(course);
-    setDialogOpen(true);
+  const toggleSelection = <T extends string>(value: T, current: T[], setter: (value: T[]) => void) => {
+    setter(current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
   };
 
-  const handleClearFilters = () => {
-    setSelectedSubject("all");
+  const handleSaveProgram = (id: string) => {
+    const key = `saved-programs:${userName || "student"}`;
+    const next = savedPrograms.includes(id)
+      ? savedPrograms.filter((item) => item !== id)
+      : [...savedPrograms, id];
+    setSavedPrograms(next);
+    localStorage.setItem(key, JSON.stringify(next));
   };
 
-  const hasFilters = searchQuery || selectedSubject !== "all";
+  const clearFilters = () => {
+    setSubjectFilters([]);
+    setGradeFilters([]);
+    setOnlineOnly(false);
+    setEligibleOnly(false);
+    setSessionFilters([]);
+    setCostRange([0, 3000]);
+  };
+
+  const FilterPanel = (
+    <div className="sketch-card space-y-5 p-4">
+      <div>
+        <p className="sketch-title text-xl">Filters</p>
+        <p className="text-sm text-muted-foreground">Narrow by grade, cost, and eligibility.</p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Grade level</p>
+        {(["9-10", "10-11", "11-12"] as GradeFilter[]).map((grade) => (
+          <label key={grade} className="sketch-check flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={gradeFilters.includes(grade)}
+              onCheckedChange={() => toggleSelection(grade, gradeFilters, setGradeFilters)}
+            />
+            {grade}
+          </label>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Subject</p>
+        {allSubjects.map((subject) => (
+          <label key={subject} className="sketch-check flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={subjectFilters.includes(subject)}
+              onCheckedChange={() => toggleSelection(subject, subjectFilters, setSubjectFilters)}
+            />
+            {subject}
+          </label>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-sm font-semibold">Cost range</p>
+        <Slider
+          value={costRange}
+          min={0}
+          max={3000}
+          step={100}
+          onValueChange={(value) => setCostRange(value as number[])}
+          className="sketch-slider"
+        />
+        <p className="text-xs text-muted-foreground">${costRange[0]} - ${costRange[1]}</p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Dates</p>
+        {["Session 1", "Session 2"].map((session) => (
+          <label key={session} className="sketch-check flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={sessionFilters.includes(session)}
+              onCheckedChange={() => toggleSelection(session, sessionFilters, setSessionFilters)}
+            />
+            {session}
+          </label>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Location & eligibility</p>
+        <label className="sketch-check flex items-center gap-2 text-sm">
+          <Checkbox checked={onlineOnly} onCheckedChange={() => setOnlineOnly(!onlineOnly)} />
+          Online only
+        </label>
+        <label className="sketch-check flex items-center gap-2 text-sm">
+          <Checkbox checked={eligibleOnly} onCheckedChange={() => setEligibleOnly(!eligibleOnly)} />
+          No prerequisites
+        </label>
+      </div>
+
+      <Button variant="outline" className="w-full sketch-btn" onClick={clearFilters}>
+        Reset filters
+      </Button>
+    </div>
+  );
+
+  if (!isAuthenticated) {
+    return (
+      <LoginPage
+        onLogin={(user) => {
+          setUserName(user.name);
+          setIsAuthenticated(true);
+        }}
+      />
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10 shadow-sm backdrop-blur-sm bg-white/95">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <GraduationCap className="w-8 h-8 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl text-primary">
-                Summer College Courses 2026
-              </h1>
-              <p className="text-muted-foreground mt-1">High school students — accelerate your college journey</p>
-            </div>
+    <div className="sketch-app min-h-screen">
+      <header className="sketch-topbar sticky top-0 z-20 border-b">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4 lg:gap-6">
+          <div className="min-w-fit">
+            <p className="sketch-heading text-2xl">SummerCourse AI</p>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary/60" />
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <Input
-              type="text"
-              placeholder="Search courses, instructors, colleges, or topics..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 h-12 text-base border-2 focus:border-primary shadow-sm"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search summer programs, colleges, providers..."
+              className="sketch-input h-11 pl-9"
             />
           </div>
 
-          {/* Filters */}
-          <FilterBar
-            selectedSubject={selectedSubject}
-            onSubjectChange={setSelectedSubject}
-            onClearFilters={handleClearFilters}
-          />
+          <div className="hidden items-center gap-2 md:flex">
+            <AiPlanAssistant userName={userName || "Student"} />
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="sketch-btn gap-2">
+                  <BookMarked className="h-4 w-4" />
+                  Saved Programs ({savedPrograms.length})
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sketch-card sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle className="sketch-title text-2xl">Saved Programs</DialogTitle>
+                  <DialogDescription>Programs you want to revisit are listed here.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3">
+                  {savedProgramData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No saved programs yet.</p>
+                  ) : (
+                    savedProgramData.map((program) => (
+                      <div key={program.id} className="sketch-card p-3">
+                        <p className="sketch-title">{program.title}</p>
+                        <p className="text-sm text-muted-foreground">{program.college}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" className="sketch-btn" onClick={() => setIsAuthenticated(false)}>
+              Log out
+            </Button>
+          </div>
+
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="sketch-btn">
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="sketch-app overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle className="sketch-title">Filters</SheetTitle>
+                  <SheetDescription>Adjust filters for better matches.</SheetDescription>
+                </SheetHeader>
+                <div className="px-4 pb-6">{FilterPanel}</div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-10">
-        {filteredCourses.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="bg-muted/50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-              <Search className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <p className="text-foreground text-xl font-medium">No courses found matching your criteria.</p>
-            <p className="text-muted-foreground mt-2">Try adjusting your filters or search query.</p>
-          </div>
-        ) : hasFilters ? (
-          <>
-            <div className="mb-8">
-              <p className="text-lg">
-                <span className="text-primary font-semibold">{filteredCourses.length}</span>{" "}
-                <span className="text-muted-foreground">
-                  {filteredCourses.length === 1 ? "course" : "courses"} found
-                </span>
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredCourses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  onClick={() => handleCourseClick(course)}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="space-y-12">
-            {/* Popular Courses Section */}
-            {popularCourses.length > 0 && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-primary/10 p-2 rounded-lg">
-                    <Flame className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl text-primary">Popular Courses</h2>
-                    <p className="text-sm text-muted-foreground">Trending courses this summer</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {popularCourses.map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      onClick={() => handleCourseClick(course)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
+      <main className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-6 lg:grid-cols-[300px_1fr]">
+        <aside className="hidden lg:block">{FilterPanel}</aside>
 
-            {/* Tailored to You Section */}
-            {tailoredCourses.length > 0 && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-primary/10 p-2 rounded-lg">
-                    <Sparkles className="w-6 h-6 text-primary" />
-                  </div>
+        <section className="space-y-4">
+          {isLoading ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
+              <Bot className="mb-3 h-10 w-10" />
+              <p className="sketch-title text-2xl">Sketching results…</p>
+            </div>
+          ) : filteredPrograms.length === 0 ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
+              <FolderSearch className="mb-3 h-10 w-10" />
+              <p className="sketch-title text-2xl">No programs found.</p>
+              <p className="text-sm text-muted-foreground">Try different filters.</p>
+            </div>
+          ) : (
+            filteredPrograms.map((program, index) => (
+              <article key={program.id} className="sketch-card sketch-tilt p-4" style={{ ["--tilt" as string]: `${(index % 3 - 1) * 0.18}deg` }}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-2xl text-primary">Tailored to You</h2>
-                    <p className="text-sm text-muted-foreground">Based on your interests in STEM</p>
+                    <h2 className="sketch-title text-2xl">{program.title}</h2>
+                    <p className="text-sm text-muted-foreground">{program.college}</p>
                   </div>
+                  <span className="sketch-pill">{program.subject}</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {tailoredCourses.map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      onClick={() => handleCourseClick(course)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
 
-            {/* More Courses Section */}
-            {otherCourses.length > 0 && (
-              <section>
-                <div className="mb-6">
-                  <h2 className="text-2xl text-primary">More Courses</h2>
-                  <p className="text-sm text-muted-foreground">Explore additional offerings</p>
+                <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
+                  <span>Age/Grade: {program.level === "Beginner" ? "14-16" : program.level === "Intermediate" ? "15-17" : "16-18"}</span>
+                  <span>Cost: ${program.credits * 600}</span>
+                  <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {program.location}</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {otherCourses.map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      onClick={() => handleCourseClick(course)}
-                    />
-                  ))}
+
+                <p className="mt-3 line-clamp-3 text-sm">{program.description}</p>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button className="sketch-btn sketch-btn-primary">Open Apply Link</Button>
+                  <Button variant="outline" className="sketch-btn" onClick={() => handleSaveProgram(program.id)}>
+                    {savedPrograms.includes(program.id) ? "Saved" : "Save"}
+                  </Button>
                 </div>
-              </section>
-            )}
-          </div>
-        )}
+              </article>
+            ))
+          )}
+        </section>
       </main>
-
-      {/* Course Detail Dialog */}
-      <CourseDetailDialog
-        course={selectedCourse}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
     </div>
   );
 }
