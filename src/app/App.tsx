@@ -31,11 +31,13 @@ import {
 import { courses } from "./data/courses";
 import { LoginPage } from "./components/login-page";
 import { AiPlanAssistant } from "./components/ai-plan-assistant";
+import { HomePage } from "./components/home-page";
 
 type GradeFilter = "9-10" | "10-11" | "11-12";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const [userName, setUserName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [subjectFilters, setSubjectFilters] = useState<string[]>([]);
@@ -192,6 +194,10 @@ export default function App() {
     </div>
   );
 
+  if (!showLogin) {
+    return <HomePage onGetStarted={() => setShowLogin(true)} />;
+  }
+
   if (!isAuthenticated) {
     return (
       <LoginPage
@@ -249,7 +255,7 @@ export default function App() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" className="sketch-btn" onClick={() => setIsAuthenticated(false)}>
+            <Button variant="outline" className="sketch-btn" onClick={() => { setIsAuthenticated(false); setShowLogin(false); }}>
               Log out
             </Button>
           </div>
