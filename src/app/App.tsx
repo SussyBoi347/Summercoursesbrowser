@@ -278,7 +278,6 @@ export default function App() {
             </Sheet>
           </div>
         </div>
-      </header>
 
       <main className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-6 lg:grid-cols-[300px_1fr]">
         <aside className="hidden lg:block">{FilterPanel}</aside>
