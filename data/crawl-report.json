@@ -1,0 +1,47 @@
+{
+  "generatedAt": "2026-02-26T20:01:25.350Z",
+  "counts": {
+    "fetched": 5,
+    "accepted": 2,
+    "rejected": 2,
+    "deduped": 1
+  },
+  "sourceErrorRates": {
+    "nyu": {
+      "fetched": 1,
+      "accepted": 0,
+      "rejected": 1,
+      "deduped": 0,
+      "errors": 1,
+      "errorRate": 1
+    },
+    "stanford": {
+      "fetched": 2,
+      "accepted": 1,
+      "rejected": 0,
+      "deduped": 1,
+      "errors": 0,
+      "errorRate": 0
+    },
+    "mit": {
+      "fetched": 2,
+      "accepted": 1,
+      "rejected": 1,
+      "deduped": 0,
+      "errors": 0,
+      "errorRate": 0.5
+    }
+  },
+  "rejectionSamples": [
+    {
+      "source": "mit",
+      "title": "",
+      "reason": "Missing required field(s): title"
+    },
+    {
+      "source": "nyu",
+      "title": "Digital Photography",
+      "reason": "Missing required field(s): applyUrl"
+    }
+  ]
+}

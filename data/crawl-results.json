@@ -1,0 +1,54 @@
+{
+  "records": [
+    {
+      "source": "stanford",
+      "title": "Introduction to Computer Science",
+      "college": "Stanford University",
+      "applyUrl": "https://example.edu/apply/cs-intro",
+      "session": "Session 1",
+      "schedule": "Mon/Wed 9AM",
+      "location": "Building A, Room 201",
+      "tuition": "$3,499"
+    },
+    {
+      "source": "stanford",
+      "title": "Intro to Computer Science",
+      "college": "Stanford University",
+      "applyUrl": "https://example.edu/apply/cs-intro-duplicate",
+      "session": "Session 1",
+      "location": "online via zoom",
+      "cost": "USD 3499"
+    },
+    {
+      "source": "mit",
+      "title": "Advanced Biology: Genetics & Evolution",
+      "college": "MIT",
+      "applyUrl": "https://example.edu/apply/bio-advanced",
+      "schedule": "Tue/Thu 1PM",
+      "location": "Hybrid campus + remote",
+      "cost": "4100"
+    },
+    {
+      "source": "mit",
+      "title": "",
+      "college": "MIT",
+      "applyUrl": "https://example.edu/apply/missing-title",
+      "session": "Session 2",
+      "location": "Cambridge campus"
+    },
+    {
+      "source": "nyu",
+      "title": "Digital Photography",
+      "college": "NYU",
+      "applyUrl": "",
+      "session": "Session 2",
+      "location": "NYU Manhattan"
+    }
+  ],
+  "errors": [
+    {
+      "source": "nyu",
+      "message": "403 while fetching detail page"
+    }
+  ]
+}
