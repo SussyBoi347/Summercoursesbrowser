@@ -28,7 +28,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "./components/ui/sheet";
-import { courses } from "./data/courses";
+import { courses as mockCourses, type Course } from "./data/courses";
 import { LoginPage } from "./components/login-page";
 import { AiPlanAssistant } from "./components/ai-plan-assistant";
 import { HomePage } from "./components/home-page";
@@ -47,7 +47,59 @@ export default function App() {
   const [sessionFilters, setSessionFilters] = useState<string[]>([]);
   const [costRange, setCostRange] = useState([0, 3000]);
   const [savedPrograms, setSavedPrograms] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isCoursesLoading, setIsCoursesLoading] = useState(true);
+  const [coursesError, setCoursesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCourses = async () => {
+      setIsCoursesLoading(true);
+      setCoursesError(null);
+
+      const endpoints = ["/api/courses", "/data/courses.generated.json"];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint);
+          if (!response.ok) continue;
+
+          const payload = await response.json();
+          if (!Array.isArray(payload)) continue;
+
+          if (isMounted) {
+            setCourses(payload as Course[]);
+            setIsCoursesLoading(false);
+          }
+          return;
+        } catch {
+          // Try next endpoint.
+        }
+      }
+
+      if (import.meta.env.DEV) {
+        if (isMounted) {
+          setCourses(mockCourses);
+          setIsCoursesLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setCourses([]);
+        setCoursesError("Unable to load courses right now. Please try again soon.");
+        setIsCoursesLoading(false);
+      }
+    };
+
+    loadCourses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const key = `saved-programs:${userName || "student"}`;
@@ -56,8 +108,8 @@ export default function App() {
   }, [userName]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 350);
-    setIsLoading(true);
+    const timer = setTimeout(() => setIsFiltering(false), 350);
+    setIsFiltering(true);
     return () => clearTimeout(timer);
   }, [searchQuery, subjectFilters, gradeFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
 
@@ -75,15 +127,26 @@ export default function App() {
       const matchesSubject = subjectFilters.length === 0 || subjectFilters.includes(course.subject);
 
       const gradeRange: GradeFilter =
-        course.level === "Beginner" ? "9-10" : course.level === "Intermediate" ? "10-11" : "11-12";
-      const matchesGrade = gradeFilters.length === 0 || gradeFilters.includes(gradeRange);
+        course.gradeBands?.[0]
+          ? (course.gradeBands[0] as GradeFilter)
+          : course.level === "Beginner"
+            ? "9-10"
+            : course.level === "Intermediate"
+              ? "10-11"
+              : "11-12";
+      const matchesGrade =
+        gradeFilters.length === 0 ||
+        (course.gradeBands?.length
+          ? course.gradeBands.some((band) => gradeFilters.includes(band as GradeFilter))
+          : gradeFilters.includes(gradeRange));
 
-      const isOnline = course.location.toLowerCase().includes("online");
+      const isOnline =
+        course.deliveryMode?.toLowerCase() === "online" || course.location.toLowerCase().includes("online");
       const matchesLocation = !onlineOnly || isOnline;
       const matchesEligibility = !eligibleOnly || !course.prerequisites;
       const matchesSession = sessionFilters.length === 0 || sessionFilters.includes(course.session);
 
-      const estimatedCost = course.credits * 600;
+      const estimatedCost = course.tuition ?? course.credits * 600;
       const matchesCost = estimatedCost >= costRange[0] && estimatedCost <= costRange[1];
 
       return matchesSearch && matchesSubject && matchesGrade && matchesLocation && matchesEligibility && matchesSession && matchesCost;
@@ -284,7 +347,23 @@ export default function App() {
         <aside className="hidden lg:block">{FilterPanel}</aside>
 
         <section className="space-y-4">
-          {isLoading ? (
+          {isCoursesLoading ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
+              <Bot className="mb-3 h-10 w-10" />
+              <p className="sketch-title text-2xl">Loading courses…</p>
+            </div>
+          ) : coursesError ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center gap-2 text-center">
+              <FolderSearch className="mb-1 h-10 w-10" />
+              <p className="sketch-title text-2xl">Couldn’t load courses.</p>
+              <p className="text-sm text-muted-foreground">{coursesError}</p>
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
+              <FolderSearch className="mb-3 h-10 w-10" />
+              <p className="sketch-title text-2xl">No courses are available yet.</p>
+            </div>
+          ) : isFiltering ? (
             <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
               <Bot className="mb-3 h-10 w-10" />
               <p className="sketch-title text-2xl">Sketching results…</p>
@@ -307,8 +386,10 @@ export default function App() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                  <span>Age/Grade: {program.level === "Beginner" ? "14-16" : program.level === "Intermediate" ? "15-17" : "16-18"}</span>
-                  <span>Cost: ${program.credits * 600}</span>
+                  <span>
+                    Age/Grade: {program.gradeBands?.join(", ") ?? (program.level === "Beginner" ? "14-16" : program.level === "Intermediate" ? "15-17" : "16-18")}
+                  </span>
+                  <span>Cost: ${program.tuition ?? program.credits * 600}</span>
                   <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {program.location}</span>
                 </div>
 
