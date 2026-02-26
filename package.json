@@ -6,7 +6,8 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "postprocess:crawl": "node scripts/postprocess-crawl.mjs"
+    "postprocess:crawl": "node scripts/postprocess-crawl.mjs",
+    "crawl:courses": "node scripts/crawl-courses.mjs"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

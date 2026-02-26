@@ -2,32 +2,24 @@
 
 This is a code bundle for Summer Courses Browser UI. The original project is available at https://www.figma.com/design/dzB27o99HelYjGapiJK4ke/Summer-Courses-Browser-UI.
 
-## Running the code
+## Running the app
 
-Run `npm i` to install the dependencies.
+- `npm i`
+- `npm run dev`
 
-Run `npm run dev` to start the development server.
+## Crawling real course data
 
-## Crawler service
+This repo now includes a crawler that pulls live course catalog records from Coursera's public API and converts them into this app's schema.
 
-A Python crawler service now lives under `crawler/` with:
+- Run crawler: `npm run crawl:courses`
+- Output file: `src/app/data/courses.generated.json`
+- Optional env vars:
+  - `CRAWL_LIMIT` (default: `30`)
+  - `CRAWL_PAGE_SIZE` (default: `100`)
+  - `CRAWL_OUTPUT` (default: `src/app/data/courses.generated.json`)
+  - `CRAWL_STATE` (default: `.crawler-state.json`)
 
-- `crawler/sources/<domain>.py` source adapters (currently `stanford_edu.py` and `yale_edu.py`)
-- `crawler/normalize.py` to map source-specific payloads into the canonical course schema used by the app
-- `crawler/run.py` entrypoint to execute selected sources and write JSON output
+By default each run tries to produce a fresh set of courses that were not present in the previous generated file.
+If it cannot find enough unseen records, it falls back to the latest available catalog page.
 
-### Run the crawler
-
-```bash
-python -m crawler.run
-```
-
-Optional source selection:
-
-```bash
-python -m crawler.run --sources stanford_edu
-```
-
-Generated output is written to:
-
-- `data/courses.generated.json`
+If the generated file is valid and non-empty, the app will use it automatically. Otherwise, it falls back to the local seed dataset.
