@@ -1,210 +1,60 @@
-import { courseListSchema } from "./course-schema";
+import { courseListSchema, type Course as SourceCourse } from "./course-schema";
+import { courses as staticCourses } from "./courses.base";
+import generatedCoursesRaw from "./courses.generated.json";
 
-const rawCourses = [
-  {
-    id: "1",
-    title: "Introduction to Computer Science",
-    subject: "Computer Science",
-    description: "Learn Python programming, algorithms, and problem-solving fundamentals.",
-    college: "Stanford University",
-    location: "Stanford, CA",
-    deliveryMode: "in-person",
-    session: "Session 1",
-    duration: "6 weeks",
-    credits: 3,
-    tuition: 1800,
-    prerequisites: "None",
-    applyUrl: "https://summer.stanford.edu/programs/intro-cs",
-    sourceUrl: "https://summer.stanford.edu/programs/intro-cs",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "2",
-    title: "Advanced Biology: Genetics & Evolution",
-    subject: "Science",
-    description: "Study heredity, evolution, and modern genetics through lab-driven coursework.",
-    college: "MIT",
-    location: "Cambridge, MA",
-    deliveryMode: "in-person",
-    session: "Session 2",
-    duration: "4 weeks",
-    credits: 4,
-    tuition: 2400,
-    prerequisites: "Biology I or equivalent",
-    applyUrl: "https://summer.mit.edu/programs/advanced-biology",
-    sourceUrl: "https://summer.mit.edu/programs/advanced-biology",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "3",
-    title: "Creative Writing Workshop",
-    subject: "English",
-    description: "Develop fiction and nonfiction writing through peer workshops and revision.",
-    college: "Yale University",
-    location: "New Haven, CT",
-    deliveryMode: "hybrid",
-    session: "Session 1",
-    duration: "6 weeks",
-    credits: 3,
-    tuition: 1500,
-    prerequisites: "None",
-    applyUrl: "https://summer.yale.edu/programs/creative-writing",
-    sourceUrl: "https://summer.yale.edu/programs/creative-writing",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "4",
-    title: "Calculus I",
-    subject: "Mathematics",
-    description: "Master limits, derivatives, and integrals with real-world applications.",
-    college: "Harvard University",
-    location: "Cambridge, MA",
-    deliveryMode: "in-person",
-    session: "Session 1",
-    duration: "6 weeks",
-    credits: 4,
-    tuition: 2600,
-    prerequisites: "Pre-Calculus or equivalent",
-    applyUrl: "https://summer.harvard.edu/programs/calculus-1",
-    sourceUrl: "https://summer.harvard.edu/programs/calculus-1",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "5",
-    title: "Studio Art: Painting Fundamentals",
-    subject: "Arts",
-    description: "Build painting technique, color theory, and portfolio-ready visual work.",
-    college: "Columbia University",
-    location: "New York, NY",
-    deliveryMode: "in-person",
-    session: "Session 2",
-    duration: "4 weeks",
-    credits: 3,
-    tuition: 1700,
-    prerequisites: "None",
-    applyUrl: "https://summer.columbia.edu/programs/studio-art",
-    sourceUrl: "https://summer.columbia.edu/programs/studio-art",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "6",
-    title: "Introduction to Business & Entrepreneurship",
-    subject: "Business",
-    description: "Learn business fundamentals and pitch a startup concept to mentors.",
-    college: "University of Pennsylvania",
-    location: "Philadelphia, PA",
-    deliveryMode: "hybrid",
-    session: "Session 1",
-    duration: "6 weeks",
-    credits: 3,
-    tuition: 2100,
-    prerequisites: "None",
-    applyUrl: "https://summer.upenn.edu/programs/business-entrepreneurship",
-    sourceUrl: "https://summer.upenn.edu/programs/business-entrepreneurship",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "7",
-    title: "Music Theory & Composition",
-    subject: "Music",
-    description: "Learn harmony, melody, and notation while composing original pieces.",
-    college: "Juilliard School",
-    location: "Online",
-    deliveryMode: "online",
-    session: "Session 2",
-    duration: "4 weeks",
-    credits: 3,
-    tuition: 1400,
-    prerequisites: "Basic instrumental proficiency",
-    applyUrl: "https://summer.juilliard.edu/programs/music-theory",
-    sourceUrl: "https://summer.juilliard.edu/programs/music-theory",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "8",
-    title: "Web Development Bootcamp",
-    subject: "Computer Science",
-    description: "Build responsive web apps with HTML, CSS, JavaScript, and React.",
-    college: "Carnegie Mellon University",
-    location: "Pittsburgh, PA",
-    deliveryMode: "in-person",
-    session: "Session 1",
-    duration: "6 weeks",
-    credits: 4,
-    tuition: 2800,
-    prerequisites: "Intro programming experience",
-    applyUrl: "https://summer.cmu.edu/programs/web-development",
-    sourceUrl: "https://summer.cmu.edu/programs/web-development",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "9",
-    title: "Chemistry: Organic Chemistry Basics",
-    subject: "Science",
-    description: "Learn organic chemistry structures, nomenclature, and lab synthesis methods.",
-    college: "UC Berkeley",
-    location: "Berkeley, CA",
-    deliveryMode: "in-person",
-    session: "Session 2",
-    duration: "6 weeks",
-    credits: 4,
-    tuition: 2500,
-    prerequisites: "General Chemistry I & II",
-    applyUrl: "https://summer.berkeley.edu/programs/organic-chemistry",
-    sourceUrl: "https://summer.berkeley.edu/programs/organic-chemistry",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "10",
-    title: "American Literature: Contemporary Voices",
-    subject: "English",
-    description: "Analyze modern literature and contemporary cultural narratives.",
-    college: "Princeton University",
-    location: "Online",
-    deliveryMode: "online",
-    session: "Session 1",
-    duration: "4 weeks",
-    credits: 3,
-    tuition: 1300,
-    prerequisites: "None",
-    applyUrl: "https://summer.princeton.edu/programs/american-literature",
-    sourceUrl: "https://summer.princeton.edu/programs/american-literature",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "11",
-    title: "Statistics for Data Science",
-    subject: "Mathematics",
-    description: "Apply probability, regression, and inference to practical data analysis.",
-    college: "Duke University",
-    location: "Durham, NC",
-    deliveryMode: "hybrid",
-    session: "Session 2",
-    duration: "6 weeks",
-    credits: 3,
-    tuition: 1900,
-    prerequisites: "Algebra II or equivalent",
-    applyUrl: "https://summer.duke.edu/programs/statistics-data-science",
-    sourceUrl: "https://summer.duke.edu/programs/statistics-data-science",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "12",
-    title: "Digital Photography & Visual Storytelling",
-    subject: "Arts",
-    description: "Develop visual storytelling, composition, and post-processing techniques.",
-    college: "NYU",
-    location: "New York, NY",
-    deliveryMode: "hybrid",
-    session: "Session 1",
-    duration: "4 weeks",
-    credits: 3,
-    tuition: 1600,
-    prerequisites: "None",
-    applyUrl: "https://summer.nyu.edu/programs/digital-photography",
-    sourceUrl: "https://summer.nyu.edu/programs/digital-photography",
-    lastVerifiedAt: "2026-02-01T00:00:00Z",
-  },
-];
+export interface Course {
+  id: string;
+  title: string;
+  subject: string;
+  description: string;
+  instructor: string;
+  duration: string;
+  session: string;
+  level: string;
+  credits: number;
+  seats: number;
+  enrolled: number;
+  image: string;
+  prerequisites?: string;
+  schedule: string;
+  location: string;
+  college: string;
+  popular?: boolean;
+  applyUrl?: string;
+  sourceUrl?: string;
+  provider?: string;
+}
 
-export const courses = courseListSchema.parse(rawCourses);
+function toLegacyCourse(course: SourceCourse, index: number): Course {
+  const level = course.credits >= 4 ? "Advanced" : course.credits <= 2 ? "Beginner" : "Intermediate";
+
+  return {
+    id: course.id,
+    title: course.title,
+    subject: course.subject,
+    description: course.description,
+    instructor: course.college,
+    duration: course.duration,
+    session: course.session,
+    level,
+    credits: course.credits,
+    seats: 200,
+    enrolled: 60 + index,
+    image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
+    prerequisites: course.prerequisites === "None" ? undefined : course.prerequisites,
+    schedule: course.deliveryMode === "online" ? "Self-paced online" : "Check provider site",
+    location: course.deliveryMode === "online" ? "Online" : course.location,
+    college: course.college,
+    popular: index < 4,
+    applyUrl: course.applyUrl,
+    sourceUrl: course.sourceUrl,
+    provider: "External",
+  };
+}
+
+const generatedValidation = courseListSchema.safeParse(generatedCoursesRaw);
+const sourceCourses = generatedValidation.success && generatedValidation.data.length > 0
+  ? generatedValidation.data
+  : staticCourses;
+
+export const courses: Course[] = sourceCourses.map(toLegacyCourse);
