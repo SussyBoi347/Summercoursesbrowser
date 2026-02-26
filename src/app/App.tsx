@@ -33,15 +33,12 @@ import { LoginPage } from "./components/login-page";
 import { AiPlanAssistant } from "./components/ai-plan-assistant";
 import { HomePage } from "./components/home-page";
 
-type GradeFilter = "9-10" | "10-11" | "11-12";
-
 export default function App() {
   const [showHome, setShowHome] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [subjectFilters, setSubjectFilters] = useState<string[]>([]);
-  const [gradeFilters, setGradeFilters] = useState<GradeFilter[]>([]);
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const [sessionFilters, setSessionFilters] = useState<string[]>([]);
@@ -59,7 +56,7 @@ export default function App() {
     const timer = setTimeout(() => setIsLoading(false), 350);
     setIsLoading(true);
     return () => clearTimeout(timer);
-  }, [searchQuery, subjectFilters, gradeFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
+  }, [searchQuery, subjectFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
 
   const allSubjects = useMemo(() => [...new Set(courses.map((course) => course.subject))], []);
 
@@ -74,21 +71,17 @@ export default function App() {
 
       const matchesSubject = subjectFilters.length === 0 || subjectFilters.includes(course.subject);
 
-      const gradeRange: GradeFilter =
-        course.level === "Beginner" ? "9-10" : course.level === "Intermediate" ? "10-11" : "11-12";
-      const matchesGrade = gradeFilters.length === 0 || gradeFilters.includes(gradeRange);
-
-      const isOnline = course.location.toLowerCase().includes("online");
+      const isOnline = course.deliveryMode === "online" || course.deliveryMode === "hybrid";
       const matchesLocation = !onlineOnly || isOnline;
-      const matchesEligibility = !eligibleOnly || !course.prerequisites;
+      const matchesEligibility = !eligibleOnly || course.prerequisites === "None"
       const matchesSession = sessionFilters.length === 0 || sessionFilters.includes(course.session);
 
-      const estimatedCost = course.credits * 600;
+      const estimatedCost = course.tuition;
       const matchesCost = estimatedCost >= costRange[0] && estimatedCost <= costRange[1];
 
-      return matchesSearch && matchesSubject && matchesGrade && matchesLocation && matchesEligibility && matchesSession && matchesCost;
+      return matchesSearch && matchesSubject && matchesLocation && matchesEligibility && matchesSession && matchesCost;
     });
-  }, [searchQuery, subjectFilters, gradeFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
+  }, [searchQuery, subjectFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
 
   const savedProgramData = useMemo(
     () => courses.filter((course) => savedPrograms.includes(course.id)),
@@ -110,7 +103,6 @@ export default function App() {
 
   const clearFilters = () => {
     setSubjectFilters([]);
-    setGradeFilters([]);
     setOnlineOnly(false);
     setEligibleOnly(false);
     setSessionFilters([]);
@@ -121,21 +113,9 @@ export default function App() {
     <div className="sketch-card space-y-5 p-4">
       <div>
         <p className="sketch-title text-xl">Filters</p>
-        <p className="text-sm text-muted-foreground">Narrow by grade, cost, and eligibility.</p>
+        <p className="text-sm text-muted-foreground">Narrow by delivery mode, cost, and prerequisites.</p>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Grade level</p>
-        {(["9-10", "10-11", "11-12"] as GradeFilter[]).map((grade) => (
-          <label key={grade} className="sketch-check flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={gradeFilters.includes(grade)}
-              onCheckedChange={() => toggleSelection(grade, gradeFilters, setGradeFilters)}
-            />
-            {grade}
-          </label>
-        ))}
-      </div>
 
       <div className="space-y-2">
         <p className="text-sm font-semibold">Subject</p>
@@ -307,15 +287,15 @@ export default function App() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                  <span>Age/Grade: {program.level === "Beginner" ? "14-16" : program.level === "Intermediate" ? "15-17" : "16-18"}</span>
-                  <span>Cost: ${program.credits * 600}</span>
+                  <span>Delivery: {program.deliveryMode}</span>
+                  <span>Cost: ${program.tuition}</span>
                   <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {program.location}</span>
                 </div>
 
                 <p className="mt-3 line-clamp-3 text-sm">{program.description}</p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Button className="sketch-btn sketch-btn-primary">Open Apply Link</Button>
+                  <Button asChild className="sketch-btn sketch-btn-primary"><a href={program.applyUrl} target="_blank" rel="noreferrer">Open Apply Link</a></Button>
                   <Button variant="outline" className="sketch-btn" onClick={() => handleSaveProgram(program.id)}>
                     {savedPrograms.includes(program.id) ? "Saved" : "Save"}
                   </Button>
