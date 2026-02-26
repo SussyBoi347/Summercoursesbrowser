@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "postprocess:crawl": "node scripts/postprocess-crawl.mjs"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

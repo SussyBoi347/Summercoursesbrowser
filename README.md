@@ -8,14 +8,13 @@ Run `npm i` to install the dependencies.
 
 Run `npm run dev` to start the development server.
 
-## Dependency audit checklist (monthly / before release)
+## Crawl post-processing (validation + enrichment)
 
-Use this checklist to keep dependency creep under control:
+Run `npm run postprocess:crawl` to validate, enrich, and deduplicate crawled course records.
 
-- [ ] Trace imports from `src/` and config files to identify packages that are no longer referenced.
-  - Suggested command: `rg -n "from ['\"][^./]" src vite.config.ts`
-- [ ] Compare traced imports against `dependencies` in `package.json`.
-- [ ] Remove unused packages in small batches: `npm uninstall <pkg...>`.
-- [ ] After **each** removal batch, validate the app still builds: `npm run build`.
-- [ ] Commit `package.json` and lockfile updates together.
-- [ ] Run `npm audit` and triage findings before release.
+By default this reads `data/crawl-results.json` and writes:
+
+- `data/courses-enriched.json`
+- `data/crawl-report.json`
+
+The QA report includes aggregate counts (`fetched`, `accepted`, `rejected`, `deduped`) and per-source error rate details.
