@@ -5,10 +5,16 @@ import type { Course } from "../data/course-schema";
 
 interface CourseCardProps {
   course: Course;
-  onClick: () => void;
+  index?: number;
+  isSaved: boolean;
+  onSave: (id: string) => void;
+  onViewDetails: (course: Course) => void;
 }
 
-export function CourseCard({ course, onClick }: CourseCardProps) {
+const getAgeRange = (level: string) =>
+  level === "Beginner" ? "14-16" : level === "Intermediate" ? "15-17" : "16-18";
+
+export function CourseCard({ course, index = 0, isSaved, onSave, onViewDetails }: CourseCardProps) {
   return (
     <Card className="group overflow-hidden hover:shadow-xl hover:shadow-primary/10 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1">
       <button

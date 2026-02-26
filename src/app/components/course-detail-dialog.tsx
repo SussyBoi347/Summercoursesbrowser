@@ -5,7 +5,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Clock, BookOpen, MapPin, AlertCircle, GraduationCap, Link as LinkIcon } from "lucide-react";
 import type { Course } from "../data/course-schema";
@@ -14,14 +13,22 @@ interface CourseDetailDialogProps {
   course: Course | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isSaved: boolean;
+  onSave: (id: string) => void;
 }
 
-export function CourseDetailDialog({ course, open, onOpenChange }: CourseDetailDialogProps) {
+export function CourseDetailDialog({
+  course,
+  open,
+  onOpenChange,
+  isSaved,
+  onSave,
+}: CourseDetailDialogProps) {
   if (!course) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sketch-card max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-3xl text-primary">{course.title}</DialogTitle>
           <DialogDescription className="text-base text-foreground/80 leading-relaxed">{course.description}</DialogDescription>

@@ -1,0 +1,25 @@
+[
+  {
+    "source": "stanford",
+    "title": "Introduction to Computer Science",
+    "college": "Stanford University",
+    "applyUrl": "https://example.edu/apply/cs-intro",
+    "session": "Session 1",
+    "schedule": "Mon/Wed 9AM",
+    "location": "Building A, Room 201",
+    "tuition": "$3,499",
+    "tuitionAmount": 3499,
+    "deliveryMode": "In Person"
+  },
+  {
+    "source": "mit",
+    "title": "Advanced Biology: Genetics & Evolution",
+    "college": "MIT",
+    "applyUrl": "https://example.edu/apply/bio-advanced",
+    "schedule": "Tue/Thu 1PM",
+    "location": "Hybrid campus + remote",
+    "cost": "4100",
+    "tuitionAmount": 4100,
+    "deliveryMode": "Hybrid"
+  }
+]

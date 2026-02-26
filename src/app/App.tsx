@@ -1,17 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  BookMarked,
-  Bot,
-  FolderSearch,
-  GraduationCap,
-  MapPin,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
+import { BookMarked, Bot, FolderSearch, Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
-import { Checkbox } from "./components/ui/checkbox";
-import { Slider } from "./components/ui/slider";
 import {
   Dialog,
   DialogContent,
@@ -28,10 +18,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "./components/ui/sheet";
-import { courses } from "./data/courses";
+import { courses as mockCourses, type Course } from "./data/courses";
 import { LoginPage } from "./components/login-page";
 import { AiPlanAssistant } from "./components/ai-plan-assistant";
 import { HomePage } from "./components/home-page";
+import { FilterBar } from "./components/filter-bar";
+import { CourseCard } from "./components/course-card";
+import { CourseDetailDialog } from "./components/course-detail-dialog";
 
 export default function App() {
   const [showHome, setShowHome] = useState(true);
@@ -44,7 +37,59 @@ export default function App() {
   const [sessionFilters, setSessionFilters] = useState<string[]>([]);
   const [costRange, setCostRange] = useState([0, 3000]);
   const [savedPrograms, setSavedPrograms] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isCoursesLoading, setIsCoursesLoading] = useState(true);
+  const [coursesError, setCoursesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCourses = async () => {
+      setIsCoursesLoading(true);
+      setCoursesError(null);
+
+      const endpoints = ["/api/courses", "/data/courses.generated.json"];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint);
+          if (!response.ok) continue;
+
+          const payload = await response.json();
+          if (!Array.isArray(payload)) continue;
+
+          if (isMounted) {
+            setCourses(payload as Course[]);
+            setIsCoursesLoading(false);
+          }
+          return;
+        } catch {
+          // Try next endpoint.
+        }
+      }
+
+      if (import.meta.env.DEV) {
+        if (isMounted) {
+          setCourses(mockCourses);
+          setIsCoursesLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setCourses([]);
+        setCoursesError("Unable to load courses right now. Please try again soon.");
+        setIsCoursesLoading(false);
+      }
+    };
+
+    loadCourses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const key = `saved-programs:${userName || "student"}`;
@@ -53,8 +98,8 @@ export default function App() {
   }, [userName]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 350);
-    setIsLoading(true);
+    const timer = setTimeout(() => setIsFiltering(false), 350);
+    setIsFiltering(true);
     return () => clearTimeout(timer);
   }, [searchQuery, subjectFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
 
@@ -174,7 +219,6 @@ export default function App() {
     </div>
   );
 
-
   if (showHome) {
     return <HomePage onGetStarted={() => setShowHome(false)} />;
   }
@@ -236,7 +280,14 @@ export default function App() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" className="sketch-btn" onClick={() => { setIsAuthenticated(false); setShowHome(true); }}>
+            <Button
+              variant="outline"
+              className="sketch-btn"
+              onClick={() => {
+                setIsAuthenticated(false);
+                setShowHome(true);
+              }}
+            >
               Log out
             </Button>
           </div>
@@ -253,7 +304,7 @@ export default function App() {
                   <SheetTitle className="sketch-title">Filters</SheetTitle>
                   <SheetDescription>Adjust filters for better matches.</SheetDescription>
                 </SheetHeader>
-                <div className="px-4 pb-6">{FilterPanel}</div>
+                <div className="px-4 pb-6">{filterPanel}</div>
               </SheetContent>
             </Sheet>
           </div>
@@ -261,10 +312,26 @@ export default function App() {
       </header>
 
       <main className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-6 lg:grid-cols-[300px_1fr]">
-        <aside className="hidden lg:block">{FilterPanel}</aside>
+        <aside className="hidden lg:block">{filterPanel}</aside>
 
         <section className="space-y-4">
-          {isLoading ? (
+          {isCoursesLoading ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
+              <Bot className="mb-3 h-10 w-10" />
+              <p className="sketch-title text-2xl">Loading courses…</p>
+            </div>
+          ) : coursesError ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center gap-2 text-center">
+              <FolderSearch className="mb-1 h-10 w-10" />
+              <p className="sketch-title text-2xl">Couldn’t load courses.</p>
+              <p className="text-sm text-muted-foreground">{coursesError}</p>
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
+              <FolderSearch className="mb-3 h-10 w-10" />
+              <p className="sketch-title text-2xl">No courses are available yet.</p>
+            </div>
+          ) : isFiltering ? (
             <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
               <Bot className="mb-3 h-10 w-10" />
               <p className="sketch-title text-2xl">Sketching results…</p>
@@ -305,6 +372,16 @@ export default function App() {
           )}
         </section>
       </main>
+
+      <CourseDetailDialog
+        course={selectedCourse}
+        open={Boolean(selectedCourse)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCourse(null);
+        }}
+        isSaved={selectedCourse ? savedPrograms.includes(selectedCourse.id) : false}
+        onSave={handleSaveProgram}
+      />
     </div>
   );
 }

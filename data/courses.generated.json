@@ -1,0 +1,37 @@
+[
+  {
+    "id": "1",
+    "title": "Creative Writing Workshop",
+    "subject": "English",
+    "description": "Develop your voice through fiction, poetry, and creative nonfiction.",
+    "instructor": "Emma Thompson",
+    "duration": "6 weeks",
+    "session": "Session 1",
+    "level": "Intermediate",
+    "credits": 3,
+    "seats": 15,
+    "enrolled": 12,
+    "image": "https://images.unsplash.com/photo-1535058489223-1331b20fa114?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    "schedule": "Mon, Wed 2:00 PM - 4:00 PM",
+    "location": "Humanities Hall, Room 102",
+    "college": "Yale University",
+    "popular": true
+  },
+  {
+    "id": "2",
+    "title": "American Literature: Contemporary Voices",
+    "subject": "English",
+    "description": "Explore contemporary American literature from diverse perspectives.",
+    "instructor": "Prof. Marcus Brown",
+    "duration": "4 weeks",
+    "session": "Session 1",
+    "level": "Intermediate",
+    "credits": 3,
+    "seats": 20,
+    "enrolled": 17,
+    "image": "https://images.unsplash.com/photo-1535058489223-1331b20fa114?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    "schedule": "Tue, Thu 10:00 AM - 12:30 PM",
+    "location": "Humanities Hall, Room 105",
+    "college": "Princeton University"
+  }
+]
