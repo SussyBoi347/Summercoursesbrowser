@@ -16,8 +16,12 @@ export interface Course {
   location: string;
   college: string;
   popular?: boolean;
+  tuition?: number;
+  deliveryMode?: "Online" | "In Person" | "Hybrid" | string;
+  gradeBands?: string[];
 }
 
+// Local fallback dataset for development mode when API/static JSON is unavailable.
 export const courses: Course[] = [
   {
     id: "1",
