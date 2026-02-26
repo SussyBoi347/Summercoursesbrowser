@@ -8,13 +8,26 @@ Run `npm i` to install the dependencies.
 
 Run `npm run dev` to start the development server.
 
-## Crawl post-processing (validation + enrichment)
+## Crawler service
 
-Run `npm run postprocess:crawl` to validate, enrich, and deduplicate crawled course records.
+A Python crawler service now lives under `crawler/` with:
 
-By default this reads `data/crawl-results.json` and writes:
+- `crawler/sources/<domain>.py` source adapters (currently `stanford_edu.py` and `yale_edu.py`)
+- `crawler/normalize.py` to map source-specific payloads into the canonical course schema used by the app
+- `crawler/run.py` entrypoint to execute selected sources and write JSON output
 
-- `data/courses-enriched.json`
-- `data/crawl-report.json`
+### Run the crawler
 
-The QA report includes aggregate counts (`fetched`, `accepted`, `rejected`, `deduped`) and per-source error rate details.
+```bash
+python -m crawler.run
+```
+
+Optional source selection:
+
+```bash
+python -m crawler.run --sources stanford_edu
+```
+
+Generated output is written to:
+
+- `data/courses.generated.json`
