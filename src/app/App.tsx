@@ -1,17 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  BookMarked,
-  Bot,
-  FolderSearch,
-  GraduationCap,
-  MapPin,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
+import { BookMarked, Bot, FolderSearch, Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
-import { Checkbox } from "./components/ui/checkbox";
-import { Slider } from "./components/ui/slider";
 import {
   Dialog,
   DialogContent,
@@ -28,10 +18,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "./components/ui/sheet";
-import { courses } from "./data/courses";
+import { courses as mockCourses, type Course } from "./data/courses";
 import { LoginPage } from "./components/login-page";
 import { AiPlanAssistant } from "./components/ai-plan-assistant";
 import { HomePage } from "./components/home-page";
+import { FilterBar } from "./components/filter-bar";
+import { CourseCard } from "./components/course-card";
+import { CourseDetailDialog } from "./components/course-detail-dialog";
 
 type GradeFilter = "9-10" | "10-11" | "11-12";
 
@@ -47,7 +40,59 @@ export default function App() {
   const [sessionFilters, setSessionFilters] = useState<string[]>([]);
   const [costRange, setCostRange] = useState([0, 3000]);
   const [savedPrograms, setSavedPrograms] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isCoursesLoading, setIsCoursesLoading] = useState(true);
+  const [coursesError, setCoursesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCourses = async () => {
+      setIsCoursesLoading(true);
+      setCoursesError(null);
+
+      const endpoints = ["/api/courses", "/data/courses.generated.json"];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint);
+          if (!response.ok) continue;
+
+          const payload = await response.json();
+          if (!Array.isArray(payload)) continue;
+
+          if (isMounted) {
+            setCourses(payload as Course[]);
+            setIsCoursesLoading(false);
+          }
+          return;
+        } catch {
+          // Try next endpoint.
+        }
+      }
+
+      if (import.meta.env.DEV) {
+        if (isMounted) {
+          setCourses(mockCourses);
+          setIsCoursesLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setCourses([]);
+        setCoursesError("Unable to load courses right now. Please try again soon.");
+        setIsCoursesLoading(false);
+      }
+    };
+
+    loadCourses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const key = `saved-programs:${userName || "student"}`;
@@ -56,8 +101,8 @@ export default function App() {
   }, [userName]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 350);
-    setIsLoading(true);
+    const timer = setTimeout(() => setIsFiltering(false), 350);
+    setIsFiltering(true);
     return () => clearTimeout(timer);
   }, [searchQuery, subjectFilters, gradeFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
 
@@ -75,18 +120,37 @@ export default function App() {
       const matchesSubject = subjectFilters.length === 0 || subjectFilters.includes(course.subject);
 
       const gradeRange: GradeFilter =
-        course.level === "Beginner" ? "9-10" : course.level === "Intermediate" ? "10-11" : "11-12";
-      const matchesGrade = gradeFilters.length === 0 || gradeFilters.includes(gradeRange);
+        course.gradeBands?.[0]
+          ? (course.gradeBands[0] as GradeFilter)
+          : course.level === "Beginner"
+            ? "9-10"
+            : course.level === "Intermediate"
+              ? "10-11"
+              : "11-12";
+      const matchesGrade =
+        gradeFilters.length === 0 ||
+        (course.gradeBands?.length
+          ? course.gradeBands.some((band) => gradeFilters.includes(band as GradeFilter))
+          : gradeFilters.includes(gradeRange));
 
-      const isOnline = course.location.toLowerCase().includes("online");
+      const isOnline =
+        course.deliveryMode?.toLowerCase() === "online" || course.location.toLowerCase().includes("online");
       const matchesLocation = !onlineOnly || isOnline;
       const matchesEligibility = !eligibleOnly || !course.prerequisites;
       const matchesSession = sessionFilters.length === 0 || sessionFilters.includes(course.session);
 
-      const estimatedCost = course.credits * 600;
+      const estimatedCost = course.tuition ?? course.credits * 600;
       const matchesCost = estimatedCost >= costRange[0] && estimatedCost <= costRange[1];
 
-      return matchesSearch && matchesSubject && matchesGrade && matchesLocation && matchesEligibility && matchesSession && matchesCost;
+      return (
+        matchesSearch &&
+        matchesSubject &&
+        matchesGrade &&
+        matchesLocation &&
+        matchesEligibility &&
+        matchesSession &&
+        matchesCost
+      );
     });
   }, [searchQuery, subjectFilters, gradeFilters, onlineOnly, eligibleOnly, sessionFilters, costRange]);
 
@@ -117,83 +181,24 @@ export default function App() {
     setCostRange([0, 3000]);
   };
 
-  const FilterPanel = (
-    <div className="sketch-card space-y-5 p-4">
-      <div>
-        <p className="sketch-title text-xl">Filters</p>
-        <p className="text-sm text-muted-foreground">Narrow by grade, cost, and eligibility.</p>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Grade level</p>
-        {(["9-10", "10-11", "11-12"] as GradeFilter[]).map((grade) => (
-          <label key={grade} className="sketch-check flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={gradeFilters.includes(grade)}
-              onCheckedChange={() => toggleSelection(grade, gradeFilters, setGradeFilters)}
-            />
-            {grade}
-          </label>
-        ))}
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Subject</p>
-        {allSubjects.map((subject) => (
-          <label key={subject} className="sketch-check flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={subjectFilters.includes(subject)}
-              onCheckedChange={() => toggleSelection(subject, subjectFilters, setSubjectFilters)}
-            />
-            {subject}
-          </label>
-        ))}
-      </div>
-
-      <div className="space-y-3">
-        <p className="text-sm font-semibold">Cost range</p>
-        <Slider
-          value={costRange}
-          min={0}
-          max={3000}
-          step={100}
-          onValueChange={(value) => setCostRange(value as number[])}
-          className="sketch-slider"
-        />
-        <p className="text-xs text-muted-foreground">${costRange[0]} - ${costRange[1]}</p>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Dates</p>
-        {["Session 1", "Session 2"].map((session) => (
-          <label key={session} className="sketch-check flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={sessionFilters.includes(session)}
-              onCheckedChange={() => toggleSelection(session, sessionFilters, setSessionFilters)}
-            />
-            {session}
-          </label>
-        ))}
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Location & eligibility</p>
-        <label className="sketch-check flex items-center gap-2 text-sm">
-          <Checkbox checked={onlineOnly} onCheckedChange={() => setOnlineOnly(!onlineOnly)} />
-          Online only
-        </label>
-        <label className="sketch-check flex items-center gap-2 text-sm">
-          <Checkbox checked={eligibleOnly} onCheckedChange={() => setEligibleOnly(!eligibleOnly)} />
-          No prerequisites
-        </label>
-      </div>
-
-      <Button variant="outline" className="w-full sketch-btn" onClick={clearFilters}>
-        Reset filters
-      </Button>
-    </div>
+  const filterPanel = (
+    <FilterBar
+      allSubjects={allSubjects}
+      gradeFilters={gradeFilters}
+      subjectFilters={subjectFilters}
+      sessionFilters={sessionFilters}
+      onlineOnly={onlineOnly}
+      eligibleOnly={eligibleOnly}
+      costRange={costRange}
+      onGradeToggle={(grade) => toggleSelection(grade, gradeFilters, setGradeFilters)}
+      onSubjectToggle={(subject) => toggleSelection(subject, subjectFilters, setSubjectFilters)}
+      onSessionToggle={(session) => toggleSelection(session, sessionFilters, setSessionFilters)}
+      onOnlineOnlyChange={setOnlineOnly}
+      onEligibleOnlyChange={setEligibleOnly}
+      onCostRangeChange={setCostRange}
+      onClearFilters={clearFilters}
+    />
   );
-
 
   if (showHome) {
     return <HomePage onGetStarted={() => setShowHome(false)} />;
@@ -256,7 +261,14 @@ export default function App() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" className="sketch-btn" onClick={() => { setIsAuthenticated(false); setShowHome(true); }}>
+            <Button
+              variant="outline"
+              className="sketch-btn"
+              onClick={() => {
+                setIsAuthenticated(false);
+                setShowHome(true);
+              }}
+            >
               Log out
             </Button>
           </div>
@@ -273,7 +285,7 @@ export default function App() {
                   <SheetTitle className="sketch-title">Filters</SheetTitle>
                   <SheetDescription>Adjust filters for better matches.</SheetDescription>
                 </SheetHeader>
-                <div className="px-4 pb-6">{FilterPanel}</div>
+                <div className="px-4 pb-6">{filterPanel}</div>
               </SheetContent>
             </Sheet>
           </div>
@@ -281,10 +293,26 @@ export default function App() {
       </header>
 
       <main className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-6 lg:grid-cols-[300px_1fr]">
-        <aside className="hidden lg:block">{FilterPanel}</aside>
+        <aside className="hidden lg:block">{filterPanel}</aside>
 
         <section className="space-y-4">
-          {isLoading ? (
+          {isCoursesLoading ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
+              <Bot className="mb-3 h-10 w-10" />
+              <p className="sketch-title text-2xl">Loading courses…</p>
+            </div>
+          ) : coursesError ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center gap-2 text-center">
+              <FolderSearch className="mb-1 h-10 w-10" />
+              <p className="sketch-title text-2xl">Couldn’t load courses.</p>
+              <p className="text-sm text-muted-foreground">{coursesError}</p>
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
+              <FolderSearch className="mb-3 h-10 w-10" />
+              <p className="sketch-title text-2xl">No courses are available yet.</p>
+            </div>
+          ) : isFiltering ? (
             <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
               <Bot className="mb-3 h-10 w-10" />
               <p className="sketch-title text-2xl">Sketching results…</p>
@@ -307,8 +335,10 @@ export default function App() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                  <span>Age/Grade: {program.level === "Beginner" ? "14-16" : program.level === "Intermediate" ? "15-17" : "16-18"}</span>
-                  <span>Cost: ${program.credits * 600}</span>
+                  <span>
+                    Age/Grade: {program.gradeBands?.join(", ") ?? (program.level === "Beginner" ? "14-16" : program.level === "Intermediate" ? "15-17" : "16-18")}
+                  </span>
+                  <span>Cost: ${program.tuition ?? program.credits * 600}</span>
                   <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {program.location}</span>
                 </div>
 
@@ -325,6 +355,16 @@ export default function App() {
           )}
         </section>
       </main>
+
+      <CourseDetailDialog
+        course={selectedCourse}
+        open={Boolean(selectedCourse)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCourse(null);
+        }}
+        isSaved={selectedCourse ? savedPrograms.includes(selectedCourse.id) : false}
+        onSave={handleSaveProgram}
+      />
     </div>
   );
 }
