@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookMarked, Bot, FolderSearch, Search, SlidersHorizontal } from "lucide-react";
+import { BookMarked, Bot, FolderSearch, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
 import {
@@ -41,6 +41,8 @@ export default function App() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isCoursesLoading, setIsCoursesLoading] = useState(true);
   const [coursesError, setCoursesError] = useState<string | null>(null);
+  const [isCrawlerRunning, setIsCrawlerRunning] = useState(false);
+  const [crawlerMessage, setCrawlerMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -154,6 +156,30 @@ export default function App() {
     setCostRange([0, 3000]);
   };
 
+  const runCrawler = async () => {
+    setIsCrawlerRunning(true);
+    setCrawlerMessage(null);
+
+    try {
+      const response = await fetch("/api/crawl-courses", {
+        method: "POST",
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        setCrawlerMessage(payload.error ?? "Crawler failed. Check terminal logs.");
+        return;
+      }
+
+      setCrawlerMessage("Crawler finished. Refreshing course list…");
+      window.location.reload();
+    } catch {
+      setCrawlerMessage("Crawler endpoint is only available when running npm run dev.");
+    } finally {
+      setIsCrawlerRunning(false);
+    }
+  };
+
   const FilterPanel = (
     <div className="sketch-card space-y-5 p-4">
       <div>
@@ -253,6 +279,10 @@ export default function App() {
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
+            <Button variant="outline" className="sketch-btn gap-2" onClick={runCrawler} disabled={isCrawlerRunning}>
+              <RefreshCw className={`h-4 w-4 ${isCrawlerRunning ? "animate-spin" : ""}`} />
+              {isCrawlerRunning ? "Running crawler…" : "Run crawler"}
+            </Button>
             <AiPlanAssistant userName={userName || "Student"} />
             <Dialog>
               <DialogTrigger asChild>
@@ -315,6 +345,11 @@ export default function App() {
         <aside className="hidden lg:block">{filterPanel}</aside>
 
         <section className="space-y-4">
+          {crawlerMessage && (
+            <div className="sketch-card p-3 text-sm">
+              {crawlerMessage}
+            </div>
+          )}
           {isCoursesLoading ? (
             <div className="sketch-card flex min-h-56 flex-col items-center justify-center text-center">
               <Bot className="mb-3 h-10 w-10" />
