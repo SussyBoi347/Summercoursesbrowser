@@ -15,6 +15,11 @@ This repo now includes a crawler that pulls live course catalog records from Cou
 - Output file: `src/app/data/courses.generated.json`
 - Optional env vars:
   - `CRAWL_LIMIT` (default: `30`)
+  - `CRAWL_PAGE_SIZE` (default: `100`)
   - `CRAWL_OUTPUT` (default: `src/app/data/courses.generated.json`)
+  - `CRAWL_STATE` (default: `.crawler-state.json`)
+
+By default each run tries to produce a fresh set of courses that were not present in the previous generated file.
+If it cannot find enough unseen records, it falls back to the latest available catalog page.
 
 If the generated file is valid and non-empty, the app will use it automatically. Otherwise, it falls back to the local seed dataset.
