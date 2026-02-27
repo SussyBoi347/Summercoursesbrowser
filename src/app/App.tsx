@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { BookMarked, Bot, FolderSearch, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
+import { Checkbox } from "./components/ui/checkbox";
+import { Slider } from "./components/ui/slider";
 import {
   Dialog,
   DialogContent,
