@@ -9,17 +9,17 @@ This is a code bundle for Summer Courses Browser UI. The original project is ava
 
 ## Crawling real course data
 
-This repo now includes a crawler that pulls live course catalog records from Coursera's public API and converts them into this app's schema.
+This repo includes a college-focused crawler for high-school summer course discovery.
+It uses local source adapters (currently Stanford + Yale sample adapters) via `crawler/run.py`,
+then maps those records into the app schema.
 
 - Run crawler: `npm run crawl:courses`
 - Output file: `src/app/data/courses.generated.json`
 - Optional env vars:
   - `CRAWL_LIMIT` (default: `30`)
-  - `CRAWL_PAGE_SIZE` (default: `100`)
   - `CRAWL_OUTPUT` (default: `src/app/data/courses.generated.json`)
-  - `CRAWL_STATE` (default: `.crawler-state.json`)
+  - `CRAWL_RAW_OUTPUT` (default: `.tmp/crawler-raw.json`)
+  - `CRAWL_PYTHON_BIN` (default: `python3`)
 
-By default each run tries to produce a fresh set of courses that were not present in the previous generated file.
-If it cannot find enough unseen records, it falls back to the latest available catalog page.
-
-If the generated file is valid and non-empty, the app will use it automatically. Otherwise, it falls back to the local seed dataset.
+The generated file is validated by the app schema at runtime; if invalid/empty,
+the app falls back to the local seed dataset.

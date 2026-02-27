@@ -42,7 +42,7 @@ class YaleEduSource:
                 "hero_image": "https://images.unsplash.com/photo-1535058489223-1331b20fa114?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
                 "schedule_text": "Tue, Thu 10:00 AM - 12:30 PM",
                 "room": "Humanities Hall, Room 105",
-                "school": "Princeton University",
+                "school": "Yale University",
             },
         ]
         return CrawlResult(source=self.name, records=records)

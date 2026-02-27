@@ -62,6 +62,11 @@ def normalize_record(raw: dict[str, Any], record_id: str) -> dict[str, Any]:
     if prerequisites:
         normalized["prerequisites"] = str(prerequisites)
 
+    source_url = str(_pick(raw, "source_url", "sourceUrl", default=""))
+    if source_url:
+        normalized["sourceUrl"] = source_url
+        normalized["applyUrl"] = source_url
+
     popular = _pick(raw, "popular", "is_popular", default=None)
     if popular is not None:
         normalized["popular"] = bool(popular)

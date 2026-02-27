@@ -13,6 +13,7 @@ interface AuthUser {
 
 interface LoginPageProps {
   onLogin: (user: AuthUser) => void;
+  mode?: "explore" | "planner";
 }
 
 type GoogleCredentialResponse = {
@@ -61,7 +62,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-export function LoginPage({ onLogin }: LoginPageProps) {
+export function LoginPage({ onLogin, mode = "explore" }: LoginPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
@@ -94,7 +95,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
   useEffect(() => {
     if (!googleClientId) {
-      setGoogleError("Google Sign-In is not configured yet. Add VITE_GOOGLE_CLIENT_ID to your environment.");
+      setGoogleError("Google Sign-In is unavailable in this deployment. Continue with email sign-in.");
       return;
     }
 
@@ -186,7 +187,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               </div>
               <CardTitle className="text-center text-2xl text-primary">Student Login</CardTitle>
               <CardDescription className="text-center">
-                Use your account to continue to the course browser.
+                {mode === "planner"
+                  ? "Sign in to open the AI planner and build your 4-year strategy."
+                  : "Use your account to continue to the course browser."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -240,19 +243,23 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 </Button>
               </form>
 
-              <div className="my-5 flex items-center gap-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">or continue with</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
+              {(googleClientId || googleError) && (
+                <>
+                  <div className="my-5 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">or continue with</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
 
-              <div className="space-y-3">
-                <div ref={googleButtonRef} className="flex justify-center" />
-                {!googleReady && !googleError && (
-                  <p className="text-center text-sm text-muted-foreground">Loading Google Sign-In…</p>
-                )}
-                {googleError && <p className="text-center text-sm text-destructive">{googleError}</p>}
-              </div>
+                  <div className="space-y-3">
+                    {googleClientId && <div ref={googleButtonRef} className="flex justify-center" />}
+                    {!googleReady && !googleError && googleClientId && (
+                      <p className="text-center text-sm text-muted-foreground">Loading Google Sign-In…</p>
+                    )}
+                    {googleError && <p className="text-center text-sm text-muted-foreground">{googleError}</p>}
+                  </div>
+                </>
+              )}
 
               <div className="mt-5 flex items-center justify-between text-sm">
                 <button type="button" className="text-primary hover:underline">

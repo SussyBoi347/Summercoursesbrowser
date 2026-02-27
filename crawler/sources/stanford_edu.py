@@ -44,7 +44,7 @@ class StanfordEduSource:
                 "prereq": "Introduction to Computer Science or basic programming knowledge",
                 "meeting_pattern": "Tue, Thu 1:00 PM - 4:00 PM",
                 "venue": "Building A, Room 203",
-                "institution": "Carnegie Mellon University",
+                "institution": "Stanford University",
                 "is_popular": True,
             },
         ]
