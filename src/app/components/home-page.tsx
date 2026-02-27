@@ -3,6 +3,8 @@ import { Button } from "./ui/button";
 
 interface HomePageProps {
   onGetStarted: () => void;
+  onSignInExplore: () => void;
+  onTryPlanner: () => void;
 }
 
 const highlights = [
@@ -38,7 +40,7 @@ const steps = [
   },
 ];
 
-export function HomePage({ onGetStarted }: HomePageProps) {
+export function HomePage({ onGetStarted, onSignInExplore, onTryPlanner }: HomePageProps) {
   return (
     <main className="sketch-app min-h-screen px-4 py-8 md:px-6 md:py-12">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -60,10 +62,10 @@ export function HomePage({ onGetStarted }: HomePageProps) {
               SummerCourse AI helps students discover real, high-impact programs and organize them into a plan that strengthens college applications year after year.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button className="sketch-btn sketch-btn-primary" onClick={onGetStarted}>
+              <Button className="sketch-btn sketch-btn-primary" onClick={onSignInExplore}>
                 Sign in and explore
               </Button>
-              <Button variant="outline" className="sketch-btn gap-2" onClick={onGetStarted}>
+              <Button variant="outline" className="sketch-btn gap-2" onClick={onTryPlanner}>
                 <Sparkles className="h-4 w-4" />
                 Try AI planner
               </Button>
